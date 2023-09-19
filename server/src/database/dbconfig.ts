@@ -6,7 +6,7 @@ const myDataSource = new DataSource({
     port: 5432,
     username: "postgres",
     password: "1234",
-    database: "fb",
+    database: process.env.DATABASE_NAME,
     entities: ["build/entity/*.js"],
     logging: true,
     synchronize: true,
