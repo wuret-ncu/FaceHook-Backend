@@ -1,4 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, Unique } from "typeorm"
+import { Post } from "./user_post";
 
 @Entity()
 @Unique(["uuid"]) // 設置 uuid 為唯一值

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn,OneToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinColumn,OneToOne,JoinTable } from "typeorm";
 import { Photo } from "./photo";
 import { Users } from "./users";
 
@@ -20,7 +20,7 @@ export class Post {
     @Column({ nullable: false })
     group: string = 'everyone'
 
-    @ManyToOne(() => Photo, { nullable: true }) 
-    @JoinColumn({ name: "photo_id" }) 
-    photo_id!: Photo ;
+    @ManyToMany(() => Photo, { nullable: true })
+    @JoinTable()
+    photo_id!: Photo[] ;
 }
