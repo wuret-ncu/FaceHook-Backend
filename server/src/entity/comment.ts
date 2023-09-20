@@ -1,12 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique } from "typeorm";
 import { Photo } from "./photo";
 import { Users } from "./users"; 
 import { Post } from "./user_post"; 
 
 @Entity()
+@Unique(["uid"]) // 設置 uuid 為唯一值
 export class Comment {
     @PrimaryGeneratedColumn()
     id: number = 0;
+
+    @Column({ nullable: false })
+    uid: string = ''
 
     @ManyToOne(() => Users, { nullable: false })
     @JoinColumn({ name: "user_id" }) 
