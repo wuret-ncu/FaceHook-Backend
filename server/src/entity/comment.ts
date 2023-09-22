@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn,OneToMany,CreateDateColumn } from "typeorm";
 import { Photo } from "./photo";
 import { Users } from "./users"; 
-import { Post } from "./user_post"; 
+import { Post } from "./user_post";
+import { Comment_like } from "./comment_like";
 
 @Entity()
 export class Comment {
@@ -26,4 +27,11 @@ export class Comment {
     @ManyToOne(() => Comment, { nullable: true }) // 添加對自己的關聯
     @JoinColumn({ name: "parent_id" })
     parent_id!: Comment | null;
+
+    @OneToMany(() => Comment_like, (commentLike) => commentLike.comment_id)
+    like!: Comment_like[];
+
+    @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
+    created_at!: Date;
+
 }
