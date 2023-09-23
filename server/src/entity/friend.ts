@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn,OneToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn,UpdateDateColumn, CreateDateColumn } from "typeorm";
 import { Photo } from "./photo"; // 引入 Photo 模型
 import { Users } from "./users"; // 引入 Photo 模型
 
@@ -17,4 +17,10 @@ export class Friend {
 
     @Column({ default: false })
     status!: boolean;
+
+    @CreateDateColumn()
+    createdAt!: Date;
+
+    @UpdateDateColumn()
+    updatedAt!: Date;
 }

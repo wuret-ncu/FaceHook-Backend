@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn,CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Post } from "./user_post"; // 引入 Photo 模型
 import { Users } from "./users"; // 引入 Photo 模型
 
@@ -17,4 +17,10 @@ export class Post_like {
     @ManyToOne(() => Post, { nullable: false }) 
     @JoinColumn({ name: "post_id" }) 
     post_id!: Post ;
+
+    @CreateDateColumn()
+    createdAt!: Date;
+
+    @UpdateDateColumn()
+    updatedAt!: Date;
 }

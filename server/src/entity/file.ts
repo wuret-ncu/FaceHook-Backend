@@ -1,8 +1,8 @@
-import { Entity, Column, PrimaryGeneratedColumn, Unique,CreateDateColumn, UpdateDateColumn } from "typeorm"
+import { Entity, Column, PrimaryGeneratedColumn, Unique, CreateDateColumn,  UpdateDateColumn} from "typeorm"
 
 @Entity()
 @Unique(["uid"]) // 設置 uuid 為唯一值
-export class Photo {
+export class File {
     @PrimaryGeneratedColumn()
     id: number = 0;
 

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Photo } from "./photo";
 import { Users } from "./users"; 
 import { Post } from "./user_post"; 
@@ -30,4 +30,10 @@ export class Comment {
     @ManyToOne(() => Comment, { nullable: true }) // 添加對自己的關聯
     @JoinColumn({ name: "parent_id" })
     parent_id!: Comment | null;
+
+    @CreateDateColumn()
+    createdAt!: Date;
+
+    @UpdateDateColumn()
+    updatedAt!: Date;
 }

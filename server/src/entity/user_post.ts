@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinColumn,OneToOne, Unique } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinColumn,OneToOne, Unique, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Photo } from "./photo";
 import { Users } from "./users";
 
@@ -29,4 +29,10 @@ export class Post {
     // photo_id!: Photo;
     // @ManyToMany(() => Photo, { nullable: true }) 
     // photo_id!: Photo[];
+
+    @CreateDateColumn()
+    createdAt!: Date;
+
+    @UpdateDateColumn()
+    updatedAt!: Date;
 }

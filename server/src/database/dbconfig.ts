@@ -1,6 +1,6 @@
 import { DataSource } from "typeorm"
 
-import { Users } from "../entity/users"; 
+require('dotenv').config()
 
 const myDataSource = new DataSource({
     type: "postgres",

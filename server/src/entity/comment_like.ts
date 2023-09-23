@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Comment } from "./comment"; 
 import { Users } from "./users"; 
 
@@ -17,4 +17,10 @@ export class Comment_like {
     @ManyToOne(() => Comment, { nullable: false }) 
     @JoinColumn({ name: "comment_id" }) 
     comment_id!: Comment ;
+
+    @CreateDateColumn()
+    createdAt!: Date;
+
+    @UpdateDateColumn()
+    updatedAt!: Date;
 }

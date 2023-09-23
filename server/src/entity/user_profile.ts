@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne,JoinColumn, OneToOne  } from "typeorm"
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne,JoinColumn, OneToOne,CreateDateColumn, UpdateDateColumn  } from "typeorm"
 import { Photo } from "./photo";
 import { Users } from "./users"; 
 
@@ -40,4 +40,10 @@ export class Profile {
 
     @Column( { nullable: true })
     single: string = '';
+
+    @CreateDateColumn()
+    createdAt!: Date;
+
+    @UpdateDateColumn()
+    updatedAt!: Date;
 }
