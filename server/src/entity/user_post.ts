@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinColumn,OneToOne, Unique, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany,JoinTable, JoinColumn,OneToOne, Unique, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Photo } from "./photo";
 import { Users } from "./users";
+import { File } from "./file";
 
 @Entity()
 @Unique(["uid"]) // 設置 uuid 為唯一值
@@ -24,15 +25,18 @@ export class Post {
     @Column({ nullable: false })
     group: string = 'everyone'
 
-    // @ManyToMany(() => Photo, { nullable: true }) 
-    // @JoinColumn({ name: "photo_id" }) 
-    // photo_id!: Photo;
-    // @ManyToMany(() => Photo, { nullable: true }) 
-    // photo_id!: Photo[];
+    @ManyToMany(() => Photo, { nullable: true })
+    @JoinTable()
+    photo_id!: Photo[] ;
+
+    @ManyToMany(() => File, { nullable: true })
+    @JoinTable()
+    file_id!: File[] ;
 
     @CreateDateColumn()
     createdAt!: Date;
 
     @UpdateDateColumn()
     updatedAt!: Date;
+    
 }
