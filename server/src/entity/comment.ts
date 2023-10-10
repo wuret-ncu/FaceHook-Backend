@@ -1,7 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique, CreateDateColumn, UpdateDateColumn,OneToMany,BeforeInsert } from "typeorm";
 import { Photo } from "./photo";
 import { Users } from "./users"; 
 import { Post } from "./user_post"; 
+import { Comment_like } from "./comment_like";
+import { v4 as uuidv4 } from 'uuid';
 
 @Entity()
 @Unique(["uid"]) // 設置 uuid 為唯一值
@@ -36,4 +38,12 @@ export class Comment {
 
     @UpdateDateColumn()
     updatedAt!: Date;
+
+    @OneToMany(() => Comment_like, (commentLike) => commentLike.comment_id)
+    like!: Comment_like[];
+
+    @BeforeInsert()
+    generateUid() {
+        this.uid = uuidv4(); // 在插入之前生成唯一的 UUID
+    }
 }
