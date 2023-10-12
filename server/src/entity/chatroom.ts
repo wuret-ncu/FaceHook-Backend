@@ -1,9 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, Unique,CreateDateColumn, BeforeInsert, UpdateDateColumn } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable, Unique, CreateDateColumn, UpdateDateColumn,OneToMany,BeforeInsert } from "typeorm";
+import { Users } from "./users"; 
 import { v4 as uuidv4 } from 'uuid';
 
 @Entity()
 @Unique(["uid"]) // 設置 uuid 為唯一值
-export class Photo {
+export class Chatroom {
     @PrimaryGeneratedColumn()
     id: number = 0;
 
@@ -11,7 +12,11 @@ export class Photo {
     uid: string = ''
 
     @Column({ nullable: false })
-    path: string = ''
+    name: string = ''
+
+    @ManyToMany(() => Users, { nullable: false })
+    @JoinTable()
+    user_id!: Users[] ;
 
     @CreateDateColumn()
     createdAt!: Date;

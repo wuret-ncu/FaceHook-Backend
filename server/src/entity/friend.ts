@@ -1,5 +1,4 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn,UpdateDateColumn, CreateDateColumn } from "typeorm";
-import { Photo } from "./photo"; // 引入 Photo 模型
 import { Users } from "./users"; // 引入 Photo 模型
 
 @Entity()
