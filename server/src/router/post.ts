@@ -61,7 +61,7 @@ router.post('/', authenticateUser,async (req: Request, res: Response) => {
 router.get("/",async (req: Request, res: Response) => {
   try {
     const postRepository = myDataSource.getRepository(Post);
-    const posts = await postRepository.find({ relations: ["user_id","like","comments","comments.like"],order:{createdAt: "DESC"} });
+    const posts = await postRepository.find({ relations: ["user_id","like","like.user_id","comments","comments.like","comments.user_id"],order:{createdAt: "DESC"} });
 
     res.json(posts);
   } catch (error) {
@@ -136,10 +136,23 @@ router.delete("/:id", authenticateUser, async (req: Request, res: Response) => {
     const postuserid = post.user_id.id
     const foundUser = req.foundUser as Users
 
-    // Check if the user has permission to delete the post
     if (postuserid !== foundUser.id) {
       return res.status(403).json({ message: '無權限刪除該貼文'});
     }
+
+    // Delete related Post_like & Comment records
+    const postLikeRepository = myDataSource.getRepository(Post_like);
+    await postLikeRepository.delete({ post_id: {id:postId} });
+
+    const commentRepository = myDataSource.getRepository(Comment);
+    const relatedComments = await commentRepository.find({ where: { post_id: { id: postId } } });
+
+    const commentLikeRepository = myDataSource.getRepository(Comment_like);
+    for (const comment of relatedComments) {
+      await commentLikeRepository.delete({ comment_id: {id:comment.id} });
+    }
+
+    await commentRepository.remove(relatedComments);
 
     await myDataSource.getRepository(Post).remove(post);
 
@@ -264,6 +277,9 @@ router.delete('/comment/:commentId', authenticateUser, async (req: Request, res:
     if (existingComment.user_id.id !== foundUser.id) {
       return res.status(403).json({ message: '無權刪除該貼文評論' });
     }
+
+    const commentLikeRepository = myDataSource.getRepository(Comment_like);
+    await commentLikeRepository.delete({ comment_id: {id:commentId} });
 
     // 執行刪除評論的操作
     await myDataSource.getRepository(Comment).remove(existingComment);
