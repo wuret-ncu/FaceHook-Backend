@@ -1,9 +1,10 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
-import cors from "cors";
+import cors from 'cors';
 import passport from 'passport';
-import configurePassport from './passport'
-import postRoute from "./router/post"
-import authRoute from "./router/auth"
+import configurePassport from './passport';
+import postRoute from "./router/post";
+import authRoute from "./router/auth";
+import userRoute from './router/user';
 
 const app: Application = express();
 
@@ -36,6 +37,7 @@ app.use(cors());
 
 app.use('/auth', authRoute);
 app.use('/post', passport.authenticate("jwt",{session:false}) , postRoute);
+app.use('/user', passport.authenticate("jwt",{session:false}) , userRoute);
 
 
 httpServer.listen(8888,() => {
