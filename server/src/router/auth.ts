@@ -19,6 +19,7 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(400).json({ message: '該信箱已被註冊' });
     }
 
+    
     // 創建新使用者
     const newUser = userRepository.create({ username, email, password });
     await userRepository.save(newUser);
@@ -49,6 +50,7 @@ router.post('/login', async (req: Request, res: Response) => {
     }
     // 製作 json web token
     const payload = {
+      uid: user.id,
       id: user.id,
       email: user.email,
     };

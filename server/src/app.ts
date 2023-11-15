@@ -9,14 +9,13 @@ import userRoute from './router/user';
 const app: Application = express();
 
 import myDataSource from "./database/dbconfig"
-import { IntegerType } from 'typeorm';
+import { IntegerType, SimpleConsoleLogger } from 'typeorm';
 
 // 初始化 Passport
 app.use(passport.initialize());
 
 // 選擇配置 Passport
 configurePassport();
-
 const httpServer = require('http').createServer(app);
 
 // establish database connection
@@ -45,106 +44,207 @@ app.use('/user', passport.authenticate("jwt", { session: false }), userRoute);
 // websocket
 import { ChatText } from './entity/chat_text';
 import { Chatroom } from './entity/chatroom';
-
-httpServer.listen(8888, () => {
-    console.log("Server listening on port 8888");
+import jwt from 'jsonwebtoken';
+require('dotenv').config();
+import { Server, Socket } from "socket.io";
+httpServer.listen(8080, () => {
+    console.log("Server listening on port 8080");
 });
 
-interface ConnectedClients {
-    [user_uuid: string]: any; // 这里的 any 可以根据你的需要替换为具体的 WebSocket 类型
+interface ChatLogItem {
+    user_uuid: string;
+    // chatroom_uuid: string;
+    message: string;
+    timestamp: number;
+  }
+
+interface ServerToClientEvents {
+    onMessageReceived: (data: ChatLogItem) => void;
+  }
+  
+interface ClientToServerEvents {
+    hello: () => void;
+    onMessageSent: (data: ChatLogItem) => void;
+    onClientConnected :(data:ChatLogItem) =>void;
 }
+const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer,{
+    cors: {
+		origin: ["http://localhost:3000", "https://admin.socket.io"],
+		methods: ["GET", "POST"],
+		credentials: true,
+	},
+});
+interface CustomSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
+    decoded?: any; // Adjust the type according to your decoded token structure
+  }
+// add middleware
 
-const connectedClients: ConnectedClients = {};
+io.use(async(socket: CustomSocket, next) => {
+    // Access the query parameters sent from the client
+    const token = socket.handshake.query.token as string | undefined;
+  if (!token) {
+    return next(new Error("Token is missing"));
+  }
 
-const io = require('socket.io')(httpServer);
-io.on("connection", function (socket: any) {
-    console.log('user is connected')
+  // Verify
+  try {
+    const newToken = token.slice(4,)
+    const decoded = await jwt.verify(newToken, process.env.PASSPORT_SECRET!) as any;
+    socket.decoded = decoded;
+    next();
+  } catch (error) {
+    console.error("JWT Verification Error:", error);
+    next(error instanceof Error ? error : new Error("Unknown error occurred during JWT verification"));
+  }
+});  
 
-    const chatRoomRepository = myDataSource.getRepository(Chatroom);
-    const chatTextRepository = myDataSource.getRepository(ChatText);
 
-    // 当有新用户连接时
-    socket.on('onClientConnected', (data: any) => {
-        const { user_uuid, chatroom } = data;
+const connectedClients: Array<any> = [];
+//io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
+io.on("connection", (socket: CustomSocket) => {
 
-        // to do select chatroom from database
+    console.log('connect success')
+    console.log('Decoded Token:', socket.decoded);
+    // 新連線 加入使用者uid 如果沒加過就要加進去
+    if(!connectedClients.includes(socket.decoded.uid)){
+        connectedClients.push(socket.decoded.uid)
+    }
 
 
-        // 将用户加入聊室
-        //socket.join(chatroom);
+		socket.on("onMessageSent", (data) => {
+            console.log(socket.decoded.uid)
+			console.log(data);
+            connectedClients.map(each =>{
+                if(each != socket.decoded.uid){
+                    io.sockets.emit("onMessageReceived", data)
+                }
+            })
+            
+			// if (data.room === "") {
+			// 	io.sockets.emit("serverMsg", data);
+			// } else {
+			// 	socket.join(data.room);
+			// 	io.to(data.room).emit("serverMsg", data);
+			// }
+		});
 
-        // 维护用户与聊天室的映射
-        if (!connectedClients[user_uuid]) {
-            connectedClients[user_uuid] = [];
+    
+
+          // 处理断开连接事件
+          // TO DO 修改資料型態？
+    socket.on('disconnect', (data:any) => {
+        console.log('A client disconnected');
+
+        // 从数组中移除断开连接的客户端
+        const index = connectedClients.indexOf(data.user_uuid);
+        if (index !== -1) {
+        connectedClients.splice(index, 1);
         }
-
-        connectedClients[user_uuid].push(chatroom);
     });
+        
 
-    // 收到消息
-    socket.on('onMessageSent', async (data: object) => {
-        console.log('Received message:', data);
-
-        // 使用 TypeORM 存储消息到数据库
-        const { user_uuid, chatroom, text } = data as { user_uuid: number, chatroom: number, text: string };
-
-        const chatText = new ChatText();
-        chatText.chatroom_id = chatroom;
-        chatText.user_id = user_uuid;
-        chatText.text = text;
-
-        // 存到資料庫
-        await chatTextRepository.save(chatText);
-
-        //to do select * from 'user_chatroom' where chatroom_id= chatroom join User user_uid
-
-        if (connectedClients[user_uuid] && connectedClients[user_uuid].includes(chatroom)) {
-            // 如果用户所属的聊天室中有其他用户
-            connectedClients[user_uuid].forEach((chatroom:any) => {
-              // 遍历用户所属的聊天室
-              io.to(chatroom).emit('onMessageReceived', {
-                user_uuid,
-                text,
-              });
-            });
-          }
-
-        //socket.to(chatroom).emit('newMessage', data);
-    });
-
-    // 当用户断开连接时
-    socket.on('onClientDisconnected', () => {
-        // 在用户断开连接时从 connectedClients 中移除
-        const user_uuid = Object.keys(connectedClients).find(
-            (key) => connectedClients[key] === socket
-        );
-        if (user_uuid) {
-            delete connectedClients[user_uuid];
-        }
-    });
-
-    // 收到訊息
-    socket.on('onMessageSent', (message: string) => {
-        console.log(message)
-        const data = JSON.parse(message)
-
-        //回傳 message 給發送訊息的 Client
-        socket.emit('getMessage', message)
-
-    })
-    // 檢查 socket 是否具有 .on 方法
-
-    // console.log(typeof socket.on)
-    // if (typeof socket.on === 'function') {
-    //     socket.on('getMessage', function(message: string){
-    //         console.log(message)
-    //         //回傳 message 給發送訊息的 Client
-    //         socket.emit('getMessage', message)
-    //     })
-    // } else {
-    //     console.error('socket.on is not a function');
-    // }
-})
+	}
+);
 
 
-//app.listen(3000);
+
+////////////////////
+// interface ConnectedClients {
+//     [user_uuid: string]: any; // 这里的 any 可以根据你的需要替换为具体的 WebSocket 类型
+// }
+
+// const connectedClients: ConnectedClients = {};
+
+// //const io = require('socket.io')(httpServer);
+// // io.on("connection", function(socket: any){
+// //     console.log('user is connected')
+
+// //         setInterval(function () {
+// //         socket.emit('second', { 'second': new Date().getSeconds() });
+// //     }, 1000);
+// // })
+// io.on("connection", function (socket: any) {
+//     console.log('user is connected')
+//     //console.log(socket.id)
+   
+    
+//     const chatRoomRepository = myDataSource.getRepository(Chatroom);
+//     const chatTextRepository = myDataSource.getRepository(ChatText);
+
+//     // 当有新用户连接时
+//     socket.on('onClientConnected', (data: any) => {
+//         console.log('new connect', data)
+//         const { user_uuid, chatroom } = data;
+//         console.log(user_uuid, chatroom)
+
+//         // to do select chatroom from database
+
+
+//         // 将用户加入聊室
+//         //socket.join(chatroom);
+
+//         // 维护用户与聊天室的映射
+//         if (!connectedClients[user_uuid]) {
+//             connectedClients[user_uuid] = [];
+//         }
+
+//         connectedClients[user_uuid].push(chatroom);
+//     });
+
+//     // 收到消息
+//     socket.on('onMessageSent', async (data: object) => {
+//         console.log('Received message:', data);
+//         io.emit('onMessageReceived', {message : 'okkk!', user_uuid:'12344'})
+
+//         // 使用 TypeORM 存储消息到数据库
+//         const { user_uuid, chatroom, text } = data as { user_uuid: number, chatroom: number, text: string };
+//         console.log(user_uuid)
+//         // const chatText = new ChatText();
+//         // chatText.chatroom_id = chatroom;
+//         // chatText.user_id = user_uuid;
+//         // chatText.text = text;
+
+//         // // 存到資料庫
+//         // await chatTextRepository.save(chatText);
+
+//         // //to do select * from 'user_chatroom' where chatroom_id= chatroom join User user_uid
+
+//         // if (connectedClients[user_uuid] && connectedClients[user_uuid].includes(chatroom)) {
+//         //     // 如果用户所属的聊天室中有其他用户
+//         //     connectedClients[user_uuid].forEach((chatroom:any) => {
+//         //       // 遍历用户所属的聊天室
+//         //       io.to(chatroom).emit('onMessageReceived', {
+//         //         user_uuid,
+//         //         text,
+//         //       });
+//         //     });
+//         //   }
+
+//         //socket.to(chatroom).emit('newMessage', data);
+//     });
+
+//     // 当用户断开连接时
+//     socket.on('onClientDisconnected', () => {
+//         // 在用户断开连接时从 connectedClients 中移除
+//         const user_uuid = Object.keys(connectedClients).find(
+//             (key) => connectedClients[key] === socket
+//         );
+//         if (user_uuid) {
+//             delete connectedClients[user_uuid];
+//         }
+//     });
+
+//     // 收到訊息
+//     socket.on('onMessageSent', (message: string) => {
+//         console.log(message)
+//         const data = JSON.parse(message)
+
+//         //回傳 message 給發送訊息的 Client
+//         socket.emit('getMessage', message)
+
+//     })
+
+//  })
+
+
+//app.listen(8888);

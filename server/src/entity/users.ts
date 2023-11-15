@@ -24,14 +24,19 @@ export class Users {
     createdAt!: Date;
 
     @BeforeInsert()
+    generateUid() {
+        this.uid = uuidv4(); // 在插入之前生成唯一的 UUID
+    }
+
+    @BeforeInsert()
     async hashPassword() {
         const saltRounds = 10;
         this.password = await bcrypt.hash(this.password, saltRounds);
     }
+    
+    @BeforeInsert()
     async comparePassword(candidatePassword: string): Promise<boolean> {
         return bcrypt.compare(candidatePassword, this.password);
     }
-    generateUid() {
-        this.uid = uuidv4(); // 在插入之前生成唯一的 UUID
-    }
+    
 }
