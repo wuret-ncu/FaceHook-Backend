@@ -1,15 +1,14 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import express, { Application } from 'express';
 import passport from 'passport';
 import configurePassport from './passport';
-import postRoute from "./router/post";
 import authRoute from "./router/auth";
+import postRoute from "./router/post";
 import userRoute from './router/user';
 
 const app: Application = express();
 
-import myDataSource from "./database/dbconfig"
-import { IntegerType, SimpleConsoleLogger } from 'typeorm';
+import myDataSource from "./database/dbconfig";
 
 // 初始化 Passport
 app.use(passport.initialize());
@@ -42,11 +41,9 @@ app.use('/user', passport.authenticate("jwt", { session: false }), userRoute);
 
 
 // websocket
-import { ChatText } from './entity/chat_text';
-import { Chatroom } from './entity/chatroom';
 import jwt from 'jsonwebtoken';
-require('dotenv').config();
 import { Server, Socket } from "socket.io";
+require('dotenv').config();
 httpServer.listen(8080, () => {
     console.log("Server listening on port 8080");
 });
@@ -112,10 +109,12 @@ io.on("connection", (socket: CustomSocket) => {
 
 
 		socket.on("onMessageSent", (data) => {
-            console.log(socket.decoded.uid)
+            console.log('socketttt',socket.decoded.uid)
 			console.log(data);
+      console.log(connectedClients)
             connectedClients.map(each =>{
                 if(each != socket.decoded.uid){
+                  console.log(each)
                     io.sockets.emit("onMessageReceived", data)
                 }
             })
@@ -128,7 +127,6 @@ io.on("connection", (socket: CustomSocket) => {
 			// }
 		});
 
-    
 
           // 处理断开连接事件
           // TO DO 修改資料型態？
@@ -149,6 +147,7 @@ io.on("connection", (socket: CustomSocket) => {
 
 
 ////////////////////
+// rubbish
 // interface ConnectedClients {
 //     [user_uuid: string]: any; // 这里的 any 可以根据你的需要替换为具体的 WebSocket 类型
 // }
