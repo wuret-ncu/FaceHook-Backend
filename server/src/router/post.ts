@@ -1,7 +1,7 @@
 import myDataSource from "../database/dbconfig"
 import express, { NextFunction, Request, Response } from 'express';
 import { Users, Post, Comment, Comment_like, Post_like } from '../entity'; 
-
+import { ILike } from "typeorm";
 
 
 declare global {
@@ -353,6 +353,53 @@ router.delete('/unlikecomment/:commentId', authenticateUser, async (req: Request
 });
 
 
+// Search for posts
+router.post("/search", async (req: Request, res: Response) => {
+  try {
+    const { q } = req.query;
+
+    if (!q) {
+      return res.status(400).json({ message: '關鍵字不能為空' });
+    }
+
+    const postRepository = myDataSource.getRepository(Post);
+    const userRepository = myDataSource.getRepository(Users);
+
+    const posts = await postRepository
+      .createQueryBuilder("post")
+      .leftJoin("post.user_id", "user")
+      .where("post.content ILIKE :keyword OR user.username ILIKE :keyword", { keyword: `%${q}%` })
+      .leftJoinAndSelect("post.like", "like")
+      .leftJoinAndSelect("like.user_id", "likeUser")
+      .leftJoinAndSelect("post.comments", "comment")
+      .leftJoinAndSelect("comment.like", "commentLike")
+      .leftJoinAndSelect("comment.user_id", "commentUser")
+      .addSelect(["user.username"]) 
+      .orderBy("post.createdAt", "DESC")
+      .getMany();
+
+    // Search for users with usernames matching the keyword
+    const users = await userRepository.find({
+      where: {
+        username: ILike(`%${q}%`),
+      },
+    });
+
+    // Combine the results
+    const combinedResults = {
+      users,
+      posts,
+    };
+
+    if (posts.length === 0 && users.length === 0) {
+      return res.status(404).json({ message: '無相關貼文或用戶' });
+    }
+
+    res.json(combinedResults);
+  } catch (error) {
+    res.status(500).json({ error });
+  }
+});
 
 
 export default router;
