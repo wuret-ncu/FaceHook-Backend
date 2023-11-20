@@ -33,10 +33,4 @@ export class Users {
         const saltRounds = 10;
         this.password = await bcrypt.hash(this.password, saltRounds);
     }
-    
-    @BeforeInsert()
-    async comparePassword(candidatePassword: string): Promise<boolean> {
-        return bcrypt.compare(candidatePassword, this.password);
-    }
-    
 }
