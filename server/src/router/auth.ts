@@ -53,6 +53,7 @@ router.post('/login', async (req: Request, res: Response) => {
       uid: user.id,
       id: user.id,
       email: user.email,
+      username: user.username
     };
     if (!process.env.PASSPORT_SECRET) {
       throw new Error('PASSPORT_SECRET is not defined');
