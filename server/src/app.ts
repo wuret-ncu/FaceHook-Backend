@@ -49,7 +49,7 @@ httpServer.listen(8080, () => {
 });
 
 interface ChatLogItem {
-    user_uuid: string;
+  userUuid: string;
     // chatroom_uuid: string;
     message: string;
     timestamp: number;
@@ -66,7 +66,7 @@ interface ClientToServerEvents {
 }
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer,{
     cors: {
-		origin: ["http://localhost:3000", "https://admin.socket.io"],
+		origin: ["*","http://localhost:8080", "https://admin.socket.io"],
 		methods: ["GET", "POST"],
 		credentials: true,
 	},
@@ -134,7 +134,7 @@ io.on("connection", (socket: CustomSocket) => {
         console.log('A client disconnected');
 
         // 从数组中移除断开连接的客户端
-        const index = connectedClients.indexOf(data.user_uuid);
+        const index = connectedClients.indexOf(data.userUuid);
         if (index !== -1) {
         connectedClients.splice(index, 1);
         }
