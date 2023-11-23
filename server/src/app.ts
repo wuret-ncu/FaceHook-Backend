@@ -57,8 +57,20 @@ interface ChatLogItem {
     timestamp: number;
   }
 
+  interface Event {
+    user_uuid: string;
+    // name: string;
+    message: string;
+    timestamp: number;
+  }
+
+
 interface ServerToClientEvents {
     onMessageReceived: (data: ChatLogItem) => void;
+    onEventReceived: (data : Event) => void;
+    onFriendUpdate: () => void;
+    onLikeReceived:(data : Event) => void;
+    onCommentReceived:(data : Event)=>void;
   }
   
 interface ClientToServerEvents {
@@ -67,6 +79,10 @@ interface ClientToServerEvents {
     onMessageSent: (roomName: any, data: ChatLogItem) => void;
   
     onClientConnected :(data:ChatLogItem) =>void;
+    onEventSend:(data:any)=> void;
+    onLikeSend:(data:any)=> void;
+    onCommentSend:(data:any)=> void;
+    onFriendInvite:(data:any) => void;
 }
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer,{
     cors: {
@@ -123,6 +139,11 @@ io.on("connection", (socket: CustomSocket) => {
         connectedClients.push(socket.decoded.uid)
     }
 
+    socket.on("onFriendInvite", (data:any)=>{
+      console.log('friend',data)
+      io.sockets.emit("onFriendUpdate")
+    })
+
 
 
     // if(!connectedClientsTest[1]){
@@ -176,6 +197,52 @@ io.on("connection", (socket: CustomSocket) => {
 			// 	io.to(data.room).emit("serverMsg", data);
 			// }
 		});
+
+    socket.on("onEventSend", (data) => {
+      console.log('socketttt',socket.decoded.uid)
+      console.log(data);
+      console.log(connectedClients)
+      // to do find friends
+      connectedClients.map(each =>{
+          if(each != socket.decoded.uid){
+            console.log(each)
+              io.sockets.emit("onEventReceived", data)
+          }
+      })
+      
+        
+// if (data.room === "") {
+// 	io.sockets.emit("serverMsg", data);
+// } else {
+// 	socket.join(data.room);
+// 	io.to(data.room).emit("serverMsg", data);
+// }
+});
+
+socket.on("onLikeSend", (data) => {
+  console.log('socketttt',socket.decoded.uid)
+  console.log(data);
+  console.log(connectedClients)
+  // to do find friends
+  connectedClients.map(each =>{
+      if(each != socket.decoded.uid){
+        console.log(each)
+          io.sockets.emit("onLikeReceived", data)
+      }
+  });
+})
+
+  socket.on("onCommentSend", (data) => {
+    console.log('socketttt',socket.decoded.uid)
+    console.log(data);
+    console.log(connectedClients)
+    // to do find friends
+    // connectedClients.map(each =>{
+    //     if(each != socket.decoded.uid){
+    //       console.log(each)
+            io.sockets.emit("onCommentReceived", data)
+        //}
+    });
 
 
           // 处理断开连接事件
