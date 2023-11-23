@@ -45,6 +45,7 @@ import jwt from 'jsonwebtoken';
 import { Server, Socket } from "socket.io";
 import {Chatroom} from './entity/chatroom'
 import {ChatText} from './entity/chat_text'
+import { Post } from './entity/user_post';
 require('dotenv').config();
 httpServer.listen(8080, () => {
     console.log("Server listening on port 8080");
@@ -69,8 +70,8 @@ interface ServerToClientEvents {
     onMessageReceived: (data: ChatLogItem) => void;
     onEventReceived: (data : Event) => void;
     onFriendUpdate: () => void;
-    onLikeReceived:(data : Event) => void;
-    onCommentReceived:(data : Event)=>void;
+    onLikeReceived:(data : any) => void;
+    onCommentReceived:(data : any)=>void;
   }
   
 interface ClientToServerEvents {
@@ -98,6 +99,7 @@ interface CustomSocket extends Socket<ClientToServerEvents, ServerToClientEvents
 
 const chatRoomRepository = myDataSource.getRepository(Chatroom);
 const chatTextRepository = myDataSource.getRepository(ChatText);
+const posttRepository = myDataSource.getRepository(Post);
 
 // add middleware
 io.use(async(socket: CustomSocket, next) => {
@@ -219,29 +221,35 @@ io.on("connection", (socket: CustomSocket) => {
 // }
 });
 
-socket.on("onLikeSend", (data) => {
+socket.on("onLikeSend", (data:any) => {
   console.log('socketttt',socket.decoded.uid)
-  console.log(data);
-  console.log(connectedClients)
-  // to do find friends
-  connectedClients.map(each =>{
-      if(each != socket.decoded.uid){
-        console.log(each)
-          io.sockets.emit("onLikeReceived", data)
-      }
-  });
+  posttRepository.find({ where: { id: data.like.post_id.id }, relations: ['user_id'] })
+  .then((user) => {
+  if (user) {
+    console.log('找到了用户：', user);
+    io.sockets.emit("onLikeReceived", {triggleBy : user[0].user_id.uid, name: data.like.user_id.username})
+  }
+})
+.catch((error) => {
+  console.error('查询出错：', error);
+});
+
 })
 
   socket.on("onCommentSend", (data) => {
     console.log('socketttt',socket.decoded.uid)
-    console.log(data);
-    console.log(connectedClients)
-    // to do find friends
-    // connectedClients.map(each =>{
-    //     if(each != socket.decoded.uid){
-    //       console.log(each)
-            io.sockets.emit("onCommentReceived", data)
-        //}
+    console.log(data)
+    posttRepository.find({ where: { id: data.comment.post_id.id }, relations: ['user_id'] })
+    .then((user) => {
+    if (user) {
+      console.log('找到了用户：', user);
+      io.sockets.emit("onCommentReceived", {triggleBy : user[0].user_id.uid, name: data.comment.user_id.username})
+    }
+  })
+  .catch((error) => {
+    console.error('查询出错：', error);
+  });
+
     });
 
 
