@@ -281,13 +281,11 @@ router.get('/current-friends/:id', authenticateUser, async (req: Request, res: R
     // Find current friends where the user is either the sender or recipient, and the status is true
     const currentFriends = await myDataSource
       .getRepository(Friend)
-      .find({
-        where: [
-          { user_id: { id: userId }, status: true }
-        ],
-        relations: ['user_id', 'freiend_user_id'], // Include relations to load user details
-
-      });
+      .createQueryBuilder('friend')
+      .where('(friend.user_id = :userId AND friend.status = true) OR (friend.friend_user_id = :userId AND friend.status = true)', { userId })
+      .leftJoinAndSelect('friend.user_id', 'user')
+      .leftJoinAndSelect('friend.freiend_user_id', 'friendUser')
+      .getMany();
 
     // Extract friend IDs
     const friendIds = currentFriends.map((friend) => friend.freiend_user_id.id);
