@@ -43,26 +43,47 @@ app.use('/user', passport.authenticate("jwt", { session: false }), userRoute);
 // websocket
 import jwt from 'jsonwebtoken';
 import { Server, Socket } from "socket.io";
+import {Chatroom} from './entity/chatroom'
+import {ChatText} from './entity/chat_text'
+import { Post } from './entity/user_post';
 require('dotenv').config();
 httpServer.listen(8080, () => {
     console.log("Server listening on port 8080");
 });
 
 interface ChatLogItem {
-  userUuid: string;
+    userUuid: string;
     // chatroom_uuid: string;
     message: string;
     timestamp: number;
   }
 
+  interface Event {
+    user_uuid: string;
+    // name: string;
+    message: string;
+    timestamp: number;
+  }
+
+
 interface ServerToClientEvents {
     onMessageReceived: (data: ChatLogItem) => void;
+    onEventReceived: (data : Event) => void;
+    onFriendUpdate: () => void;
+    onLikeReceived:(data : any) => void;
+    onCommentReceived:(data : any)=>void;
   }
   
 interface ClientToServerEvents {
     hello: () => void;
-    onMessageSent: (data: ChatLogItem) => void;
+    //onMessageSent: (data: ChatLogItem) => void;
+    onMessageSent: (roomName: any, data: ChatLogItem) => void;
+  
     onClientConnected :(data:ChatLogItem) =>void;
+    onEventSend:(data:any)=> void;
+    onLikeSend:(data:any)=> void;
+    onCommentSend:(data:any)=> void;
+    onFriendInvite:(data:any) => void;
 }
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer,{
     cors: {
@@ -74,8 +95,13 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer,{
 interface CustomSocket extends Socket<ClientToServerEvents, ServerToClientEvents> {
     decoded?: any; // Adjust the type according to your decoded token structure
   }
-// add middleware
 
+
+const chatRoomRepository = myDataSource.getRepository(Chatroom);
+const chatTextRepository = myDataSource.getRepository(ChatText);
+const posttRepository = myDataSource.getRepository(Post);
+
+// add middleware
 io.use(async(socket: CustomSocket, next) => {
     // Access the query parameters sent from the client
     const token = socket.handshake.query.token as string | undefined;
@@ -96,9 +122,17 @@ io.use(async(socket: CustomSocket, next) => {
 });  
 
 
+interface ConnectedClients {
+    [roomName: string]: any; // 这里的 any 可以根据你的需要替换为具体的 WebSocket 类型
+}
+
+const connectedClientsTest: ConnectedClients = {};
+
+
 const connectedClients: Array<any> = [];
 //io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
 io.on("connection", (socket: CustomSocket) => {
+
 
     console.log('connect success')
     console.log('Decoded Token:', socket.decoded);
@@ -107,17 +141,56 @@ io.on("connection", (socket: CustomSocket) => {
         connectedClients.push(socket.decoded.uid)
     }
 
+    socket.on("onFriendInvite", (data:any)=>{
+      console.log('friend',data)
+      io.sockets.emit("onFriendUpdate")
+    })
 
-		socket.on("onMessageSent", (data) => {
+
+
+    // if(!connectedClientsTest[1]){
+    //   connectedClientsTest[1] = [];
+    // }
+    // if(!connectedClientsTest[2]){
+    //   connectedClientsTest[2] = [];
+    // }
+    
+    // if(socket.decoded.uid ===1 && !connectedClientsTest[1].includes(socket.decoded.uid)){
+    //   connectedClientsTest[1].push(socket.decoded.uid);
+    // }else if(socket.decoded.uid ===3 && !connectedClientsTest[1].includes(socket.decoded.uid)){
+    //   connectedClientsTest[1].push(socket.decoded.uid);
+    // }else if(!connectedClientsTest[2].includes(socket.decoded.uid)){
+    //   connectedClientsTest[2].push(socket.decoded.uid);
+    // }
+
+    //socket.on('onMessageSent', async({ roomName, data }) => {
+		socket.on("onMessageSent", async(data) => {
+          console.log( data)
             console.log('socketttt',socket.decoded.uid)
+            const chatText = new ChatText();
+            // 目前聊天室id預設1
+            chatText.chatroom_id = 1;
+            // chatText.chatroom_id = data.chatroom_uuid;
+            // or data.chatroom _id??????
+            chatText.user_id = socket.decoded.id;
+            chatText.text = data.message;
+
+            // 存到資料庫
+            await chatTextRepository.save(chatText);
+
+        
+            io.emit('onMessageReceived', data);
+            //to do select * from 'user_chatroom' where chatroom_id= chatroom join User user_uid
+
+
 			console.log(data);
       console.log(connectedClients)
-            connectedClients.map(each =>{
-                if(each != socket.decoded.uid){
-                  console.log(each)
-                    io.sockets.emit("onMessageReceived", data)
-                }
-            })
+            // connectedClients.map(each =>{
+            //     if(each != socket.decoded.uid){
+            //       console.log(each)
+            //         io.sockets.emit("onMessageReceived", data)
+            //     }
+            // })
             
 			// if (data.room === "") {
 			// 	io.sockets.emit("serverMsg", data);
@@ -127,14 +200,66 @@ io.on("connection", (socket: CustomSocket) => {
 			// }
 		});
 
+    socket.on("onEventSend", (data) => {
+      console.log('socketttt',socket.decoded.uid)
+      console.log(data);
+      console.log(connectedClients)
+      // to do find friends
+      connectedClients.map(each =>{
+          if(each != socket.decoded.uid){
+            console.log(each)
+              io.sockets.emit("onEventReceived", data)
+          }
+      })
+      
+        
+// if (data.room === "") {
+// 	io.sockets.emit("serverMsg", data);
+// } else {
+// 	socket.join(data.room);
+// 	io.to(data.room).emit("serverMsg", data);
+// }
+});
+
+socket.on("onLikeSend", (data:any) => {
+  console.log('socketttt',socket.decoded.uid)
+  posttRepository.find({ where: { id: data.like.post_id.id }, relations: ['user_id'] })
+  .then((user) => {
+  if (user) {
+    console.log('找到了用户：', user);
+    io.sockets.emit("onLikeReceived", {triggleBy : user[0].user_id.uid, name: data.like.user_id.username})
+  }
+})
+.catch((error) => {
+  console.error('查询出错：', error);
+});
+
+})
+
+  socket.on("onCommentSend", (data) => {
+    console.log('socketttt',socket.decoded.uid)
+    console.log(data)
+    posttRepository.find({ where: { id: data.comment.post_id.id }, relations: ['user_id'] })
+    .then((user) => {
+    if (user) {
+      console.log('找到了用户：', user);
+      io.sockets.emit("onCommentReceived", {triggleBy : user[0].user_id.uid, name: data.comment.user_id.username})
+    }
+  })
+  .catch((error) => {
+    console.error('查询出错：', error);
+  });
+
+    });
+
 
           // 处理断开连接事件
           // TO DO 修改資料型態？
-    socket.on('disconnect', (data:any) => {
+    socket.on('disconnect', () => {
         console.log('A client disconnected');
 
         // 从数组中移除断开连接的客户端
-        const index = connectedClients.indexOf(data.userUuid);
+        const index = connectedClients.indexOf(socket.decoded.uid);
         if (index !== -1) {
         connectedClients.splice(index, 1);
         }

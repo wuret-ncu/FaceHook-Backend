@@ -57,7 +57,7 @@ router.post('/login', async (req: Request, res: Response) => {
     }
     // 製作 json web token
     const payload = {
-      uid: user.id,
+      uid: user.uid,
       id: user.id,
       email: user.email,
       username: user.username
