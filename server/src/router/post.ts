@@ -1,6 +1,6 @@
 import myDataSource from "../database/dbconfig"
 import express, { NextFunction, Request, Response } from 'express';
-import { Users, Post, Comment, Comment_like, Post_like } from '../entity'; 
+import { Users, Post, Comment, Comment_like, Post_like,Profile } from '../entity'; 
 import { ILike } from "typeorm";
 
 
@@ -61,7 +61,7 @@ router.post('/', authenticateUser,async (req: Request, res: Response) => {
 router.get("/",async (req: Request, res: Response) => {
   try {
     const postRepository = myDataSource.getRepository(Post);
-    const posts = await postRepository.find({ relations: ["user_id","like","like.user_id","comments","comments.like","comments.user_id"],order:{createdAt: "DESC"} });
+    const posts = await postRepository.find({ relations: ["user_id","like","like.user_id","comments","comments.like","comments.like.user_id","comments.user_id"],order:{createdAt: "DESC"} });
 
     res.json(posts);
   } catch (error) {
@@ -364,6 +364,7 @@ router.post("/search", async (req: Request, res: Response) => {
 
     const postRepository = myDataSource.getRepository(Post);
     const userRepository = myDataSource.getRepository(Users);
+    const profileRepository = myDataSource.getRepository(Profile);
 
     const posts = await postRepository
       .createQueryBuilder("post")
@@ -383,8 +384,9 @@ router.post("/search", async (req: Request, res: Response) => {
       where: {
         username: ILike(`%${q}%`),
       },
+      relations: ["profile"],
     });
-
+    
     // Combine the results
     const combinedResults = {
       users,
