@@ -3,7 +3,7 @@ import { ChatText } from "./chat_text";
 import { Users } from "./users"; 
 
 @Entity()
-export class Comment_like {
+export class Chat_like {
     @PrimaryGeneratedColumn()
     id: number = 0;
 
