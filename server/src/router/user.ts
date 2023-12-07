@@ -210,6 +210,7 @@ router.post('/add-friend-invite/:friendUserId', authenticateUser, async (req: Re
 
     // user 與 chatroom 建立關聯（把使用者加到聊天室裡面）
     addUserToChatroom(userId,chatroomId);
+    addUserToChatroom(friendId,chatroomId);
 
     return res.status(201).json({ message: '成功發出好友邀請', friend: newFriend });
   } catch (error) {
