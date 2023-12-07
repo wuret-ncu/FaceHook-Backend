@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn,Unique, BeforeInsert } from "typeorm"
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn,Unique, BeforeInsert, OneToOne,OneToMany } from "typeorm"
+import { Profile,Friend } from "./index"
 import * as bcrypt from 'bcrypt'; 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -22,6 +23,12 @@ export class Users {
 
     @CreateDateColumn()
     createdAt!: Date;
+
+    @OneToOne(() => Profile, (profile) => profile.user_id, { cascade: true }) 
+    profile!: Profile[]; 
+
+    @OneToMany(() => Friend, (friend) => friend.user_id, { cascade: true }) 
+    friend!: Friend[]; 
 
     @BeforeInsert()
     generateUid() {
