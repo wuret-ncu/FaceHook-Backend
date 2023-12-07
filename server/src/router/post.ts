@@ -37,8 +37,8 @@ const authenticateUser = async (req: Request, res: Response, next: () => void) =
 // Create a new post
 router.post('/', authenticateUser,async (req: Request, res: Response) => {
   try {
-    const { content } = req.body;
-    const group = "everybody"
+    const { content,group } = req.body;
+    // const group = "everybody"
 
     const post = new Post();
     post.content = content;
@@ -61,7 +61,7 @@ router.post('/', authenticateUser,async (req: Request, res: Response) => {
 router.get("/",async (req: Request, res: Response) => {
   try {
     const postRepository = myDataSource.getRepository(Post);
-    const posts = await postRepository.find({ relations: ["user_id","like","like.user_id","comments","comments.like","comments.like.user_id","comments.user_id"],order:{createdAt: "DESC"} });
+    const posts = await postRepository.find({ relations: ["user_id","user_id.friend.freiend_user_id","like","like.user_id","comments","comments.like","comments.like.user_id","comments.user_id"],order:{createdAt: "DESC"} });
 
     res.json(posts);
   } catch (error) {
@@ -93,7 +93,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 router.put("/:id", authenticateUser, async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.id);
-    const { content } = req.body;
+    const { content,group } = req.body;
 
     const postRepository = myDataSource.getRepository(Post);
     const post = await postRepository.findOne({ where: { id: postId }, relations: ["user_id"] });
@@ -111,6 +111,7 @@ router.put("/:id", authenticateUser, async (req: Request, res: Response) => {
     }
 
     post.content = content;
+    post.group = group;
 
     await myDataSource.getRepository(Post).save(post);
 
@@ -369,13 +370,14 @@ router.post("/search", async (req: Request, res: Response) => {
     const posts = await postRepository
       .createQueryBuilder("post")
       .leftJoin("post.user_id", "user")
+      .leftJoinAndMapOne("user.friendUser", Users, "friendUser", "user.friend.freiend_user_id = friendUser.id")
       .where("post.content ILIKE :keyword OR user.username ILIKE :keyword", { keyword: `%${q}%` })
       .leftJoinAndSelect("post.like", "like")
       .leftJoinAndSelect("like.user_id", "likeUser")
       .leftJoinAndSelect("post.comments", "comment")
       .leftJoinAndSelect("comment.like", "commentLike")
       .leftJoinAndSelect("comment.user_id", "commentUser")
-      .addSelect(["user.username"]) 
+      .addSelect(["user.username", "user.friendUser.username"])
       .orderBy("post.createdAt", "DESC")
       .getMany();
 
@@ -393,11 +395,11 @@ router.post("/search", async (req: Request, res: Response) => {
       posts,
     };
 
-    if (posts.length === 0 && users.length === 0) {
-      return res.status(404).json({ message: '無相關貼文或用戶' });
-    }
+    // if (posts.length === 0 && users.length === 0) {
+    //   return res.status(200).json({ message: '無相關貼文或用戶' });
+    // }
 
-    res.json(combinedResults);
+    res.status(200).json(combinedResults);
   } catch (error) {
     res.status(500).json({ error });
   }
