@@ -5,7 +5,7 @@ import configurePassport from './passport';
 import authRoute from "./router/auth";
 import postRoute from "./router/post";
 import userRoute from './router/user';
-
+import chatRoute from './router/chat';
 const app: Application = express();
 
 import myDataSource from "./database/dbconfig";
@@ -35,6 +35,7 @@ app.use(express.json())
 app.use(cors());
 
 app.use('/auth', authRoute);
+app.use('/chat', chatRoute);
 app.use('/post', passport.authenticate("jwt", { session: false }), postRoute);
 app.use('/user', passport.authenticate("jwt", { session: false }), userRoute);
 
@@ -87,7 +88,7 @@ interface ClientToServerEvents {
 }
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer,{
     cors: {
-		origin: ["*","http://localhost:8080", "https://admin.socket.io"],
+		origin: ["*","http://localhost:3000", "https://admin.socket.io"],
 		methods: ["GET", "POST"],
 		credentials: true,
 	},
