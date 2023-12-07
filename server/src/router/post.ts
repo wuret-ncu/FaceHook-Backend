@@ -370,14 +370,13 @@ router.post("/search", async (req: Request, res: Response) => {
     const posts = await postRepository
       .createQueryBuilder("post")
       .leftJoin("post.user_id", "user")
-      .leftJoinAndMapOne("user.friendUser", Users, "friendUser", "user.friend.freiend_user_id = friendUser.id")
       .where("post.content ILIKE :keyword OR user.username ILIKE :keyword", { keyword: `%${q}%` })
       .leftJoinAndSelect("post.like", "like")
       .leftJoinAndSelect("like.user_id", "likeUser")
       .leftJoinAndSelect("post.comments", "comment")
       .leftJoinAndSelect("comment.like", "commentLike")
       .leftJoinAndSelect("comment.user_id", "commentUser")
-      .addSelect(["user.username", "user.friendUser.username"])
+      .addSelect(["user.username"])
       .orderBy("post.createdAt", "DESC")
       .getMany();
 
