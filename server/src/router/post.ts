@@ -1,6 +1,8 @@
 import myDataSource from "../database/dbconfig"
 import express, { NextFunction, Request, Response } from 'express';
-import { Users, Post, Comment, Comment_like, Post_like,Profile } from '../entity'; 
+
+import { Users, Post,Photo, Comment, Comment_like, Post_like,Profile } from '../entity'; 
+
 import { ILike } from "typeorm";
 
 
@@ -11,7 +13,16 @@ declare global {
     }
   }
 }
-
+declare global {
+  namespace Express {
+    interface Request {
+      files: any; // 這裡的類型可以根據您的實際需要來指定
+      req:any;
+      file: any;
+      cb:any;
+    }
+  }
+}
 const router = express.Router();
 
 
@@ -53,6 +64,53 @@ router.post('/', authenticateUser,async (req: Request, res: Response) => {
     return res.status(201).json({ message: '成功新增貼文', post });
   } catch (error) {
     return res.status(500).send(error);
+  }
+});
+
+//新增圖片
+
+
+
+const multer = require('multer');
+import path from 'path';
+
+
+
+const storage = multer.diskStorage({
+  destination: function(_req: any, _file: any, cb: (arg0: null, arg1: string) => void) {
+    
+    cb(null, 'images/');
+  },
+  filename: function (_req: any, file: { originalname: string; fieldname: string; }, cb: (arg0: null, arg1: string) => void) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = path.extname(file.originalname);
+    const imageName = file.fieldname + '-' + uniqueSuffix + extension;
+    cb(null, imageName);
+  }
+});
+
+const upload = multer({ storage: storage });
+
+router.post('/images', upload.array('images'), async (req: Request, res: Response) => {
+  try {
+    const photoList = [];
+
+    for (const file of req.files) {
+      const photo = new Photo();
+      const imageName = file.filename; // 使用 Multer 提供的 filename
+      photo.path = `./images/${imageName}`;
+
+      // Save this data to a database probably
+      await myDataSource.getRepository(Photo).save(photo);
+
+      // Add the photo object to the list
+      photoList.push(photo);
+    }
+
+    res.status(200).json({ photos: photoList });
+  } catch (error) {
+    res.status(500).json({ error });
+    console.log(error);
   }
 });
 
