@@ -9,3 +9,4 @@ export * from './user_post';
 export * from './user_profile';
 export * from './users';
 export * from './file';
+export * from './chatroom';

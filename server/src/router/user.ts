@@ -1,6 +1,6 @@
 import myDataSource from "../database/dbconfig"
 import express, { NextFunction, Request, Response } from 'express';
-import { Users, Post, Profile, Comment, Comment_like, Post_like,Friend } from '../entity'; 
+import { Users, Post, Profile, Comment, Comment_like, Post_like,Friend,Chatroom } from '../entity'; 
 
 
 declare global {
@@ -10,6 +10,53 @@ declare global {
     }
   }
 }
+
+// 建立 chatroom 與 user 的關聯
+async function addUserToChatroom(userId: number, chatroomId: number): Promise<void> {
+  const chatroomRepository = myDataSource.getRepository(Chatroom);
+  const userRepository = myDataSource.getRepository(Users);
+  
+  console.log(`userId: ${userId}, chatroomId: ${chatroomId}`);
+  const user = await userRepository.findOne({ where: { id: userId } });
+  const chatroom = await chatroomRepository.findOne({ where: { id: chatroomId } });
+
+  if (chatroom && user) {
+    
+    chatroom.name = "default";
+    chatroom.user_id = [user];
+    
+    await chatroomRepository.manager.save(chatroom);
+}
+}
+
+// 查詢 chatroom 有哪些 user
+async function getChatroomUsers(chatroomId: number): Promise<Users[]> {
+  const chatroomRepository = myDataSource.getRepository(Chatroom);
+  const chatroom = await chatroomRepository.findOne({
+    where: { id: chatroomId },
+    relations: ["user_id"],
+  });
+  
+
+  return chatroom?.user_id || [];
+}
+
+// 刪除 chatroom 與 user 的關聯
+async function removeUserFromChatroom(userId: number, chatroomId: number): Promise<void> {
+  const chatroomRepository = myDataSource.getRepository(Chatroom);
+  const userRepository = myDataSource.getRepository(Users);
+
+  const user = await userRepository.findOne({ where: { id: userId } });
+  const chatroom = await chatroomRepository.findOne({ where: { id: chatroomId } });
+
+  if (user && chatroom) {
+    chatroom.user_id = chatroom.user_id.filter(u => u.id !== user.id);
+    await chatroomRepository.save(chatroom);
+  }
+}
+
+
+
 const router = express.Router();
 
 const authenticateUser = async (req: Request, res: Response, next: () => void) => {
@@ -153,6 +200,18 @@ router.post('/add-friend-invite/:friendUserId', authenticateUser, async (req: Re
 
     await myDataSource.getRepository(Friend).save(newFriend);
 
+    // 新增 chatroom
+    const chatroomRepository = myDataSource.getRepository(Chatroom);
+    const newChatroom = new Chatroom;
+    newChatroom.name = 'default';
+    // 取得 chatroom id
+    const savedChatroom = await chatroomRepository.save(newChatroom);
+    const chatroomId = savedChatroom.id;
+
+    // user 與 chatroom 建立關聯（把使用者加到聊天室裡面）
+    addUserToChatroom(userId,chatroomId);
+    addUserToChatroom(friendId,chatroomId);
+
     return res.status(201).json({ message: '成功發出好友邀請', friend: newFriend });
   } catch (error) {
     return res.status(500).send(error);
@@ -281,13 +340,11 @@ router.get('/current-friends/:id', authenticateUser, async (req: Request, res: R
     // Find current friends where the user is either the sender or recipient, and the status is true
     const currentFriends = await myDataSource
       .getRepository(Friend)
-      .find({
-        where: [
-          { user_id: { id: userId }, status: true }
-        ],
-        relations: ['user_id', 'freiend_user_id'], // Include relations to load user details
-
-      });
+      .createQueryBuilder('friend')
+      .where('(friend.user_id = :userId AND friend.status = true) OR (friend.friend_user_id = :userId AND friend.status = true)', { userId })
+      .leftJoinAndSelect('friend.user_id', 'user')
+      .leftJoinAndSelect('friend.freiend_user_id', 'friendUser')
+      .getMany();
 
     // Extract friend IDs
     const friendIds = currentFriends.map((friend) => friend.freiend_user_id.id);
