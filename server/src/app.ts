@@ -47,6 +47,7 @@ import { Server, Socket } from "socket.io";
 import {Chatroom} from './entity/chatroom'
 import {ChatText} from './entity/chat_text'
 import { Post } from './entity/user_post';
+import { stringify } from 'uuid';
 require('dotenv').config();
 httpServer.listen(8080, () => {
     console.log("Server listening on port 8080");
@@ -54,7 +55,7 @@ httpServer.listen(8080, () => {
 
 interface ChatLogItem {
     userUuid: string;
-    // chatroom_uuid: string;
+    chatroomUuid: string;
     message: string;
     timestamp: number;
   }
@@ -77,8 +78,8 @@ interface ServerToClientEvents {
   
 interface ClientToServerEvents {
     hello: () => void;
-    //onMessageSent: (data: ChatLogItem) => void;
-    onMessageSent: (roomName: any, data: ChatLogItem) => void;
+    onMessageSent: (data: ChatLogItem) => void;
+    //onMessageSent: (roomName: any, data: ChatLogItem) => void;
   
     onClientConnected :(data:ChatLogItem) =>void;
     onEventSend:(data:any)=> void;
@@ -169,8 +170,8 @@ io.on("connection", (socket: CustomSocket) => {
           console.log( data)
             console.log('socketttt',socket.decoded.uid)
             const chatText = new ChatText();
-            // 目前聊天室id預設1
-            chatText.chatroom_id = 1;
+            
+            chatText.chatroom_id = parseInt(data.chatroomUuid);
             // chatText.chatroom_id = data.chatroom_uuid;
             // or data.chatroom _id??????
             chatText.user_id = socket.decoded.id;
@@ -179,7 +180,6 @@ io.on("connection", (socket: CustomSocket) => {
             // 存到資料庫
             await chatTextRepository.save(chatText);
 
-        
             io.emit('onMessageReceived', data);
             //to do select * from 'user_chatroom' where chatroom_id= chatroom join User user_uid
 

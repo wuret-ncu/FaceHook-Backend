@@ -12,7 +12,7 @@ declare global {
 }
 
 // 建立 chatroom 與 user 的關聯
-async function addUserToChatroom(userId: number, chatroomId: number): Promise<void> {
+async function addUserToChatroom(userId: number, roomName: string, chatroomId: number): Promise<void> {
   const chatroomRepository = myDataSource.getRepository(Chatroom);
   const userRepository = myDataSource.getRepository(Users);
   
@@ -21,8 +21,7 @@ async function addUserToChatroom(userId: number, chatroomId: number): Promise<vo
   const chatroom = await chatroomRepository.findOne({ where: { id: chatroomId } });
 
   if (chatroom && user) {
-    
-    chatroom.name = "default";
+    chatroom.name = roomName;
     chatroom.user_id = [user];
     
     await chatroomRepository.manager.save(chatroom);
@@ -203,14 +202,18 @@ router.post('/add-friend-invite/:friendUserId', authenticateUser, async (req: Re
     // 新增 chatroom
     const chatroomRepository = myDataSource.getRepository(Chatroom);
     const newChatroom = new Chatroom;
-    newChatroom.name = 'default';
+    
+    const testName =  friend.username +'&'+foundUser.username
+    console.log(testName)
+    newChatroom.name = testName
+    //newChatroom.name = 'default';
     // 取得 chatroom id
     const savedChatroom = await chatroomRepository.save(newChatroom);
     const chatroomId = savedChatroom.id;
 
     // user 與 chatroom 建立關聯（把使用者加到聊天室裡面）
-    addUserToChatroom(userId,chatroomId);
-    addUserToChatroom(friendId,chatroomId);
+    addUserToChatroom(userId, testName,chatroomId);
+    addUserToChatroom(friendId, testName,chatroomId);
 
     return res.status(201).json({ message: '成功發出好友邀請', friend: newFriend });
   } catch (error) {
