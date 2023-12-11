@@ -56,9 +56,25 @@ httpServer.listen(8080, () => {
 interface ChatLogItem {
     userUuid: string;
     chatroomUuid: string;
-    message: string;
+    text: string;
     timestamp: number;
   }
+
+  // export interface ChatLogItem {
+  //   id?: string;
+  //   text: string;
+  //   createdAt: string;
+  //   user_id: {
+  //     id:number
+  //     uid?: string,
+  //     username?: string,
+  //     email?: string,
+  //     password?: string
+  //   };
+  //   is_return?: boolean;
+  //   type?: string,
+  // }
+  
 
   interface Event {
     user_uuid: string;
@@ -124,25 +140,18 @@ io.use(async(socket: CustomSocket, next) => {
 });  
 
 
-interface ConnectedClients {
-    [roomName: string]: any; // 这里的 any 可以根据你的需要替换为具体的 WebSocket 类型
-}
-
-const connectedClientsTest: ConnectedClients = {};
-
-
 const connectedClients: Array<any> = [];
-//io.on("connection", (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
 io.on("connection", (socket: CustomSocket) => {
-
 
     console.log('connect success')
     console.log('Decoded Token:', socket.decoded);
     // 新連線 加入使用者uid 如果沒加過就要加進去
-    if(!connectedClients.includes(socket.decoded.uid)){
-        connectedClients.push(socket.decoded.uid)
+    const index = connectedClients.findIndex(each => each.uid === socket.decoded.uid)
+    if(index <0){
+        connectedClients.push(socket.decoded)
     }
 
+    // frined
     socket.on("onFriendInvite", (data:any)=>{
       console.log('friend',data)
       io.sockets.emit("onFriendUpdate")
@@ -167,31 +176,30 @@ io.on("connection", (socket: CustomSocket) => {
 
     //socket.on('onMessageSent', async({ roomName, data }) => {
 		socket.on("onMessageSent", async(data) => {
-          console.log( data)
-            console.log('socketttt',socket.decoded.uid)
+            console.log( data)
             const chatText = new ChatText();
             
             chatText.chatroom_id = parseInt(data.chatroomUuid);
-            // chatText.chatroom_id = data.chatroom_uuid;
-            // or data.chatroom _id??????
             chatText.user_id = socket.decoded.id;
-            chatText.text = data.message;
+            chatText.text = data.text;
 
             // 存到資料庫
-            await chatTextRepository.save(chatText);
+            const result = await chatTextRepository.save(chatText);
+            const newData = {...data, "id": result.id};
 
-            io.emit('onMessageReceived', data);
+
+            //io.emit('onMessageReceived', newData);
             //to do select * from 'user_chatroom' where chatroom_id= chatroom join User user_uid
 
 
 			console.log(data);
       console.log(connectedClients)
-            // connectedClients.map(each =>{
-            //     if(each != socket.decoded.uid){
-            //       console.log(each)
-            //         io.sockets.emit("onMessageReceived", data)
-            //     }
-            // })
+            connectedClients.map(each =>{
+                if(each.uid != socket.decoded.uid){
+                  console.log(each)
+                    io.emit("onMessageReceived", newData)
+                }
+            })
             
 			// if (data.room === "") {
 			// 	io.sockets.emit("serverMsg", data);
@@ -260,7 +268,7 @@ socket.on("onLikeSend", (data:any) => {
         console.log('A client disconnected');
 
         // 从数组中移除断开连接的客户端
-        const index = connectedClients.indexOf(socket.decoded.uid);
+        const index = connectedClients.findIndex(each =>each.uid === socket.decoded.uid);
         if (index !== -1) {
         connectedClients.splice(index, 1);
         }

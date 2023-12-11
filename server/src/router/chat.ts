@@ -42,6 +42,7 @@ router.get("/getChatLog/:chatroomId", async (req: Request, res: Response) => {
             .innerJoinAndSelect("chat_text.user_id", "user")
             .where({chatroom_id: chatroomId})
             .select(["chat_text.id", "user.id", "chat_text.text","chat_text.createdAt"])
+            .orderBy({ "chat_text.createdAt": "ASC" }) 
             .getMany();
         //.find({where:{chatroom_id:chatroomId},order:{createdAt: "ASC"}, relations: ["user_id"],select: ["id", "text", "createdAt", "user_id.id"]})
 
