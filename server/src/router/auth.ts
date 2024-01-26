@@ -4,12 +4,24 @@ import { Users,Profile } from '../entity';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 require('dotenv').config();
+import { body, validationResult } from 'express-validator';
 
 const router = express.Router();
 
 // 註冊使用者
-router.post('/register', async (req: Request, res: Response) => {
-  try {
+router.post('/register', [
+  body('username').notEmpty().withMessage('請輸入使用者姓名'),
+  body('email').isEmail().withMessage('請輸入有效的電子郵件地址'),
+  body('password').isLength({ min: 6 }).withMessage('你的密碼最少需要 6 個字元。請嘗試使用其他密碼。'),
+  ], async (req: Request, res: Response) => {
+  
+    try {
+
+    const errors= validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: errors.array()[0].msg });
+    }
+
     const { username, email, password } = req.body;
 
     const userRepository = myDataSource.getRepository(Users); 
@@ -35,6 +47,7 @@ router.post('/register', async (req: Request, res: Response) => {
     return res.status(500).json({ msg: '無法註冊使用者' , error });
   }
 });
+
 
 // 登入
 router.post('/login', async (req: Request, res: Response) => {

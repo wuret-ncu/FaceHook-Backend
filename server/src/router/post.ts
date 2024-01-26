@@ -425,18 +425,15 @@ router.post("/search", async (req: Request, res: Response) => {
     const userRepository = myDataSource.getRepository(Users);
     const profileRepository = myDataSource.getRepository(Profile);
 
-    const posts = await postRepository
-      .createQueryBuilder("post")
-      .leftJoin("post.user_id", "user")
-      .where("post.content ILIKE :keyword OR user.username ILIKE :keyword", { keyword: `%${q}%` })
-      .leftJoinAndSelect("post.like", "like")
-      .leftJoinAndSelect("like.user_id", "likeUser")
-      .leftJoinAndSelect("post.comments", "comment")
-      .leftJoinAndSelect("comment.like", "commentLike")
-      .leftJoinAndSelect("comment.user_id", "commentUser")
-      .addSelect(["user.username"])
-      .orderBy("post.createdAt", "DESC")
-      .getMany();
+    const posts = await postRepository.find({
+      where: [
+        { content: ILike(`%${q}%`) },
+        { user_id: { username: ILike(`%${q}%`) } },
+      ],
+      relations: ["user_id", "user_id.friend.freiend_user_id", "like", "like.user_id", "comments", "comments.like", "comments.like.user_id", "comments.user_id"],
+      order: { createdAt: "DESC" },
+    });
+    
 
     // Search for users with usernames matching the keyword
     const users = await userRepository.find({

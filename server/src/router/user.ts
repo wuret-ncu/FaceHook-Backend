@@ -159,7 +159,7 @@ router.get("/userpost/:id", async (req: Request, res: Response) => {
     const userId = parseInt(req.params.id);
 
     const postRepository = myDataSource.getRepository(Post);
-    const post = await postRepository.find({ where: { user_id: {id:userId} },relations: ["user_id","like","like.user_id","comments","comments.like","comments.user_id"],order:{createdAt: "DESC"}});
+    const post = await postRepository.find({ where: { user_id: {id:userId} },relations: ["user_id","like","like.user_id","comments","comments.like","comments.like.user_id","comments.user_id"],order:{createdAt: "DESC"}});
 
     if (!post) {
       return res.status(404).json({ message: '查無使用者貼文' });
